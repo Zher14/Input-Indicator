@@ -8,7 +8,7 @@
 	},
 	"version": "v1.0.0",
 	"id": "zher14.input-indicator",
-	"name": "input Indicator",
+	"name": "input indicator",
 	"developer": "zher14",
 	"description": "This mod displays your clicks on screen, allowing you to configure them to your liking.",
 	"tags": ["utility", "interface"],
