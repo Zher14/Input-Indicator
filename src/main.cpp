@@ -18,6 +18,10 @@ namespace iv {
 		return duration<double>(steady_clock::now().time_since_epoch()).count();
 	}
 
+	static GLubyte u8(float v) {
+		return static_cast<GLubyte>(std::clamp(v, 0.f, 255.f));
+	}
+
 	struct Seg {
 		double start;
 		double end; // < 0 mientras el boton sigue pulsado
@@ -76,49 +80,57 @@ namespace iv {
 }
 
 // ---------------------------------------------------------------------
-// Overlay minimalista: teclas + barras verticales de clicks/releases
+// Overlay: teclas + barra de clicks/releases (vertical u horizontal)
 // ---------------------------------------------------------------------
 class InputOverlay : public CCNode {
 protected:
-	static constexpr float W = 12.f;       // ancho de tecla / barra
-	static constexpr float GAP = 5.f;      // espacio entre columnas
-	static constexpr float PGAP = 12.f;    // espacio extra entre jugadores
-	static constexpr float BAR_H = 110.f;  // alto de la barra
-	static constexpr float BASE = W + 3.f; // donde empieza la barra
+	static constexpr float W = 12.f;            // grosor de tecla / barra
+	static constexpr float GAP = 5.f;           // espacio entre filas
+	static constexpr float PGAP = 12.f;         // espacio extra entre jugadores
+	static constexpr float BASE = W + 3.f;      // donde empieza la barra
+	static constexpr float BASE_WINDOW = 2.f;   // segundos visibles a velocidad 1x
 
 	struct Row {
 		int player = 0;
 		int button = 0;
+		float off = 0.f;
 		CCNode* holder = nullptr;
-		CCDrawNode* key = nullptr;
-		CCDrawNode* bar = nullptr;
+		CCLayerColor* bg = nullptr;
+		CCNode* segLayer = nullptr;
+		CCLayerColor* key = nullptr;
+		std::vector<CCLayerColor*> pool;
 	};
 	std::vector<Row> m_rows;
 	CCLabelBMFont* m_info = nullptr;
 
-	static void box(CCDrawNode* n, float x1, float y1, float x2, float y2, ccColor4F c) {
-		CCPoint v[4] = {
-			CCPoint(x1, y1), CCPoint(x2, y1), CCPoint(x2, y2), CCPoint(x1, y2)
-		};
-		n->drawPolygon(v, 4, c, 0.f, c);
-	}
-
-	void addRow(int player, int button, float x) {
+	void addRow(int player, int button, float off) {
 		Row r;
 		r.player = player;
 		r.button = button;
+		r.off = off;
 
 		r.holder = CCNode::create();
-		r.holder->setPosition({x, 0.f});
 		this->addChild(r.holder);
 
-		r.bar = CCDrawNode::create();
-		r.holder->addChild(r.bar);
+		r.bg = CCLayerColor::create(ccc4(255, 255, 255, 255), W, 10.f);
+		r.holder->addChild(r.bg);
 
-		r.key = CCDrawNode::create();
+		r.segLayer = CCNode::create();
+		r.holder->addChild(r.segLayer);
+
+		r.key = CCLayerColor::create(ccc4(255, 255, 255, 255), W, W);
 		r.holder->addChild(r.key);
 
 		m_rows.push_back(r);
+	}
+
+	CCLayerColor* getSeg(Row& r, size_t i) {
+		while (r.pool.size() <= i) {
+			auto n = CCLayerColor::create(ccc4(255, 255, 255, 255), W, 1.f);
+			r.segLayer->addChild(n);
+			r.pool.push_back(n);
+		}
+		return r.pool[i];
 	}
 
 	bool init(bool platformer) {
@@ -139,7 +151,6 @@ protected:
 		m_info = CCLabelBMFont::create("", "chatFont.fnt");
 		m_info->setAnchorPoint({0.f, 0.5f});
 		m_info->setScale(0.55f);
-		m_info->setPosition({0.f, -9.f});
 		this->addChild(m_info);
 
 		this->scheduleUpdate();
@@ -172,9 +183,16 @@ public:
 		float scale = static_cast<float>(iv::S<double>("scale"));
 		float px = static_cast<float>(iv::S<double>("pos-x"));
 		float py = static_cast<float>(iv::S<double>("pos-y"));
-		float window = static_cast<float>(iv::S<double>("window"));
+		float speed = static_cast<float>(iv::S<double>("speed"));
+		float length = static_cast<float>(iv::S<double>("length"));
 		bool showTimeline = iv::S<bool>("timeline");
-		if (window < 0.1f) window = 0.1f;
+		bool vertical = iv::S<bool>("vertical");
+		bool flip = iv::S<bool>("flip");
+		ccColor3B col = iv::S<ccColor3B>("bar-color");
+
+		if (speed < 0.05f) speed = 0.05f;
+		if (length < 20.f) length = 20.f;
+		float window = BASE_WINDOW / speed;
 
 		auto win = CCDirector::get()->getWinSize();
 		this->setScale(scale);
@@ -191,33 +209,57 @@ public:
 			r.holder->setVisible(visible);
 			if (!visible) continue;
 
-			// Tecla: cuadro tenue, blanco al pulsar
+			// Orientacion: en vertical las filas van de lado a lado;
+			// en horizontal se rota 90 grados y van hacia abajo.
+			if (vertical) {
+				r.holder->setPosition({r.off, 0.f});
+				r.holder->setRotation(0.f);
+			} else {
+				r.holder->setPosition({0.f, -r.off});
+				r.holder->setRotation(90.f);
+			}
+			r.holder->setScaleY(flip ? -1.f : 1.f);
+
+			// Tecla
 			bool pressed = st.down[r.player][r.button];
-			r.key->clear();
-			box(r.key, 0.f, 0.f, W, W,
-				pressed ? ccc4f(1.f, 1.f, 1.f, 0.95f * op) : ccc4f(1.f, 1.f, 1.f, 0.14f * op));
+			r.key->setColor(pressed ? col : ccColor3B{255, 255, 255});
+			r.key->setOpacity(iv::u8((pressed ? 0.95f : 0.14f) * 255.f * op));
 
-			// Barra vertical: lo mas nuevo abajo, junto a la tecla
-			r.bar->setVisible(showTimeline);
+			// Barra
+			r.segLayer->setVisible(showTimeline);
+			r.bg->setVisible(showTimeline);
 			if (!showTimeline) continue;
-			r.bar->clear();
-			box(r.bar, 0.f, BASE, W, BASE + BAR_H, ccc4f(1.f, 1.f, 1.f, 0.07f * op));
 
+			r.bg->setContentSize({W, length});
+			r.bg->setPosition({0.f, BASE});
+			r.bg->setColor({255, 255, 255});
+			r.bg->setOpacity(iv::u8(0.07f * 255.f * op));
+
+			size_t n = 0;
 			for (auto& s : st.segs[r.player][r.button]) {
 				double e = s.end < 0 ? t : s.end;
-				float y1 = BAR_H * static_cast<float>((t - e) / window);
-				float y2 = BAR_H * static_cast<float>((t - s.start) / window);
+				float y1 = length * static_cast<float>((t - e) / window);
+				float y2 = length * static_cast<float>((t - s.start) / window);
 				y1 = std::max(0.f, y1);
-				y2 = std::min(BAR_H, y2);
-				if (y1 >= BAR_H || y2 <= 0.f) continue;
-				if (y2 - y1 < 1.f) y2 = std::min(BAR_H, y1 + 1.f);
+				y2 = std::min(length, y2);
+				if (y1 >= length || y2 <= 0.f) continue;
+				if (y2 - y1 < 1.f) y2 = std::min(length, y1 + 1.f);
 
-				float a = (s.end < 0 ? 0.95f : 0.8f) * op;
-				box(r.bar, 0.f, BASE + y1, W, BASE + y2, ccc4f(1.f, 1.f, 1.f, a));
+				auto node = this->getSeg(r, n++);
+				node->setContentSize({W, y2 - y1});
+				node->setPosition({0.f, BASE + y1});
+				node->setColor(col);
+				node->setOpacity(iv::u8((s.end < 0 ? 0.95f : 0.8f) * 255.f * op));
+				node->setVisible(true);
 			}
+			for (; n < r.pool.size(); n++) r.pool[n]->setVisible(false);
 		}
 
-		// Texto pequeno debajo
+		// Texto pequeno (arriba o abajo segun la orientacion)
+		bool above = !vertical || flip;
+		m_info->setPosition({0.f, above ? 9.f : -9.f});
+		m_info->setAnchorPoint({(!vertical && flip) ? 1.f : 0.f, 0.5f});
+
 		bool showCps = iv::S<bool>("show-cps");
 		bool showTotal = iv::S<bool>("show-total");
 		std::string txt;
@@ -227,7 +269,7 @@ public:
 			txt += fmt::format("{}", st.total);
 		}
 		m_info->setString(txt.c_str());
-		m_info->setOpacity(static_cast<GLubyte>(255.f * op * 0.7f));
+		m_info->setOpacity(iv::u8(255.f * op * 0.7f));
 		m_info->setVisible(!txt.empty());
 	}
 };
@@ -243,34 +285,43 @@ protected:
 		double min;
 		double max;
 	};
-	static constexpr SliderDef SLIDERS[5] = {
+	static constexpr SliderDef SLIDERS[6] = {
 		{"opacity", "Opacidad", 0.1, 1.0},
 		{"scale", "Tamano", 0.5, 2.0},
 		{"pos-x", "Posicion X", 0.0, 100.0},
 		{"pos-y", "Posicion Y", 0.0, 100.0},
-		{"window", "Duracion barra", 0.5, 5.0},
+		{"speed", "Velocidad barra", 0.25, 4.0},
+		{"length", "Largo barra", 60.0, 240.0},
 	};
-	CCLabelBMFont* m_labels[5] = {};
+	CCLabelBMFont* m_labels[6] = {};
 
 	static std::string labelText(int i, double v) {
 		return fmt::format("{}: {:.2f}", SLIDERS[i].name, v);
 	}
 
+	static ccColor3B swatchColor(int i) {
+		static const ccColor3B cols[7] = {
+			{255, 255, 255}, {70, 235, 255}, {90, 255, 130}, {255, 225, 70},
+			{255, 80, 80}, {190, 100, 255}, {80, 140, 255}
+		};
+		return cols[i];
+	}
+
 	bool init() {
-		if (!Popup::init(300.f, 300.f)) return false;
+		if (!Popup::init(300.f, 310.f)) return false;
 		this->setTitle("Input Indicator");
 
 		auto size = m_mainLayer->getContentSize();
 		float cx = size.width / 2.f;
 
 		// Sliders
-		for (int i = 0; i < 5; i++) {
-			float y = 228.f - 34.f * i;
+		for (int i = 0; i < 6; i++) {
+			float y = 258.f - 30.f * i;
 			double cur = iv::S<double>(SLIDERS[i].key);
 
 			m_labels[i] = CCLabelBMFont::create(labelText(i, cur).c_str(), "bigFont.fnt");
-			m_labels[i]->setScale(0.35f);
-			m_labels[i]->setPosition({cx, y + 12.f});
+			m_labels[i]->setScale(0.3f);
+			m_labels[i]->setPosition({cx, y + 10.f});
 			m_mainLayer->addChild(m_labels[i]);
 
 			auto slider = Slider::create(this, menu_selector(IVSettingsPopup::onSlider), 0.7f);
@@ -280,20 +331,44 @@ protected:
 			m_mainLayer->addChild(slider);
 		}
 
-		// Toggles (2 columnas)
+		// Colores rapidos
+		auto colorLbl = CCLabelBMFont::create("Color", "bigFont.fnt");
+		colorLbl->setScale(0.3f);
+		colorLbl->setAnchorPoint({0.f, 0.5f});
+		colorLbl->setPosition({24.f, 82.f});
+		m_mainLayer->addChild(colorLbl);
+
+		for (int i = 0; i < 7; i++) {
+			auto holder = CCNode::create();
+			holder->setContentSize({20.f, 20.f});
+			auto sq = CCLayerColor::create(ccc4(255, 255, 255, 255), 20.f, 20.f);
+			sq->setColor(swatchColor(i));
+			holder->addChild(sq);
+
+			auto btn = CCMenuItemSpriteExtra::create(
+				holder, this, menu_selector(IVSettingsPopup::onSwatch)
+			);
+			btn->setTag(i);
+			btn->setPosition({96.f + 28.f * i, 82.f});
+			m_buttonMenu->addChild(btn);
+		}
+
+		// Toggles (3 columnas)
 		struct ToggleDef { char const* key; char const* name; };
-		ToggleDef toggles[4] = {
-			{"enabled", "Activado"},
+		ToggleDef toggles[6] = {
+			{"enabled", "Activo"},
 			{"show-cps", "CPS"},
 			{"show-total", "Clicks"},
 			{"timeline", "Barra"},
+			{"vertical", "Vertical"},
+			{"flip", "Invertir"},
 		};
-		for (int i = 0; i < 4; i++) {
-			float x = (i % 2 == 0) ? 45.f : 170.f;
-			float y = 50.f - 26.f * (i / 2);
+		for (int i = 0; i < 6; i++) {
+			float x = 28.f + 84.f * (i % 3);
+			float y = 52.f - 26.f * (i / 3);
 
 			auto t = CCMenuItemToggler::createWithStandardSprites(
-				this, menu_selector(IVSettingsPopup::onToggle), 0.55f
+				this, menu_selector(IVSettingsPopup::onToggle), 0.5f
 			);
 			t->toggle(iv::S<bool>(toggles[i].key));
 			t->setTag(i);
@@ -301,9 +376,9 @@ protected:
 			m_buttonMenu->addChild(t);
 
 			auto lbl = CCLabelBMFont::create(toggles[i].name, "bigFont.fnt");
-			lbl->setScale(0.35f);
+			lbl->setScale(0.3f);
 			lbl->setAnchorPoint({0.f, 0.5f});
-			lbl->setPosition({x + 22.f, y});
+			lbl->setPosition({x + 18.f, y});
 			m_mainLayer->addChild(lbl);
 		}
 
@@ -321,7 +396,7 @@ protected:
 	void onSlider(CCObject* sender) {
 		auto thumb = static_cast<SliderThumb*>(sender);
 		int i = thumb->getTag();
-		if (i < 0 || i > 4) return;
+		if (i < 0 || i > 5) return;
 
 		double val = SLIDERS[i].min + thumb->getValue() * (SLIDERS[i].max - SLIDERS[i].min);
 		val = std::round(val * 100.0) / 100.0;
@@ -330,12 +405,19 @@ protected:
 		this->applyNow();
 	}
 
+	void onSwatch(CCObject* sender) {
+		int i = static_cast<CCNode*>(sender)->getTag();
+		if (i < 0 || i > 6) return;
+		Mod::get()->setSettingValue<ccColor3B>("bar-color", swatchColor(i));
+		this->applyNow();
+	}
+
 	void onToggle(CCObject* sender) {
 		auto t = static_cast<CCMenuItemToggler*>(sender);
 		bool on = !t->isToggled(); // el callback se llama antes de cambiar el estado
-		char const* keys[4] = {"enabled", "show-cps", "show-total", "timeline"};
+		char const* keys[6] = {"enabled", "show-cps", "show-total", "timeline", "vertical", "flip"};
 		int i = t->getTag();
-		if (i < 0 || i > 3) return;
+		if (i < 0 || i > 5) return;
 		Mod::get()->setSettingValue<bool>(keys[i], on);
 		this->applyNow();
 	}
