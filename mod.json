@@ -1,0 +1,60 @@
+{
+	"geode": "6.0.0",
+	"gd": {
+		"win": "2.209",
+		"android": "2.209",
+		"mac": "2.209",
+		"ios": "2.209"
+	},
+	"version": "v1.0.0",
+	"id": "tuusuario.input-indicator",
+	"name": "Input Indicator",
+	"developer": "TuUsuario",
+	"description": "Muestra tus clicks en pantalla con CPS y contador. Configurable desde el menú de pausa.",
+	"tags": ["utility", "interface"],
+	"settings": {
+		"enabled": {
+			"type": "bool",
+			"name": "Activado",
+			"default": true
+		},
+		"opacity": {
+			"type": "float",
+			"name": "Opacidad",
+			"default": 0.8,
+			"min": 0.1,
+			"max": 1.0
+		},
+		"scale": {
+			"type": "float",
+			"name": "Tamaño",
+			"default": 1.0,
+			"min": 0.5,
+			"max": 2.0
+		},
+		"pos-x": {
+			"type": "float",
+			"name": "Posición X (%)",
+			"default": 12.0,
+			"min": 0.0,
+			"max": 100.0
+		},
+		"pos-y": {
+			"type": "float",
+			"name": "Posición Y (%)",
+			"default": 15.0,
+			"min": 0.0,
+			"max": 100.0
+		},
+		"show-cps": {
+			"type": "bool",
+			"name": "Mostrar CPS",
+			"default": true
+		},
+		"show-total": {
+			"type": "bool",
+			"name": "Mostrar clicks totales",
+			"default": true
+		}
+	}
+}
