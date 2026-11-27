@@ -7,9 +7,9 @@
 		"ios": "2.2091"
 	},
 	"version": "v1.0.0",
-	"id": "Zher14.input-indicator",
-	"name": "Input Indicator",
-	"developer": "Zher14",
+	"id": "zher14.input-indicator",
+	"name": "input Indicator",
+	"developer": "zher14",
 	"description": "This mod displays your clicks on screen, allowing you to configure them to your liking.",
 	"tags": ["utility", "interface"],
 	"settings": {
