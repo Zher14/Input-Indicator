@@ -6,11 +6,11 @@
 		"mac": "2.2091",
 		"ios": "2.2091"
 	},
-	"version": "v1.1.0",
+	"version": "v1.2.0",
 	"id": "zher14.input-indicator",
 	"name": "Input Indicator",
 	"developer": "Zher14",
-	"description": "Indicador minimalista de clicks con barra de clicks y releases, CPS y contador.",
+	"description": "Indicador minimalista de clicks con barras verticales de clicks y releases, CPS y contador.",
 	"tags": ["utility", "interface"],
 	"settings": {
 		"enabled": {
@@ -21,7 +21,7 @@
 		"opacity": {
 			"type": "float",
 			"name": "Opacidad",
-			"default": 0.8,
+			"default": 0.9,
 			"min": 0.1,
 			"max": 1.0
 		},
@@ -35,21 +35,21 @@
 		"pos-x": {
 			"type": "float",
 			"name": "Posición X (%)",
-			"default": 8.0,
+			"default": 4.0,
 			"min": 0.0,
 			"max": 100.0
 		},
 		"pos-y": {
 			"type": "float",
 			"name": "Posición Y (%)",
-			"default": 22.0,
+			"default": 30.0,
 			"min": 0.0,
 			"max": 100.0
 		},
 		"window": {
 			"type": "float",
 			"name": "Duración de la barra (s)",
-			"default": 2.0,
+			"default": 1.5,
 			"min": 0.5,
 			"max": 5.0
 		},
