@@ -6,11 +6,11 @@
 		"mac": "2.2091",
 		"ios": "2.2091"
 	},
-	"version": "v1.2.0",
+	"version": "v1.3.0",
 	"id": "zher14.input-indicator",
 	"name": "Input Indicator",
 	"developer": "Zher14",
-	"description": "Indicador minimalista de clicks con barras verticales de clicks y releases, CPS y contador.",
+	"description": "Indicador minimalista de clicks con barra de clicks y releases vertical u horizontal, colores y velocidad ajustables.",
 	"tags": ["utility", "interface"],
 	"settings": {
 		"enabled": {
@@ -46,12 +46,34 @@
 			"min": 0.0,
 			"max": 100.0
 		},
-		"window": {
+		"speed": {
 			"type": "float",
-			"name": "Duración de la barra (s)",
-			"default": 1.5,
-			"min": 0.5,
-			"max": 5.0
+			"name": "Velocidad de la barra",
+			"default": 1.0,
+			"min": 0.25,
+			"max": 4.0
+		},
+		"length": {
+			"type": "float",
+			"name": "Largo de la barra",
+			"default": 110.0,
+			"min": 60.0,
+			"max": 240.0
+		},
+		"bar-color": {
+			"type": "rgb",
+			"name": "Color de la barra",
+			"default": [255, 255, 255]
+		},
+		"vertical": {
+			"type": "bool",
+			"name": "Barra vertical",
+			"default": true
+		},
+		"flip": {
+			"type": "bool",
+			"name": "Invertir dirección",
+			"default": false
 		},
 		"timeline": {
 			"type": "bool",
