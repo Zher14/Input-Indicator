@@ -6,11 +6,11 @@
 		"mac": "2.2091",
 		"ios": "2.2091"
 	},
-	"version": "v1.0.0",
+	"version": "v1.1.0",
 	"id": "zher14.input-indicator",
-	"name": "input indicator",
-	"developer": "zher14",
-	"description": "This mod displays your clicks on screen, allowing you to configure them to your liking.",
+	"name": "Input Indicator",
+	"developer": "Zher14",
+	"description": "Indicador minimalista de clicks con barra de clicks y releases, CPS y contador.",
 	"tags": ["utility", "interface"],
 	"settings": {
 		"enabled": {
@@ -35,16 +35,28 @@
 		"pos-x": {
 			"type": "float",
 			"name": "Posición X (%)",
-			"default": 12.0,
+			"default": 8.0,
 			"min": 0.0,
 			"max": 100.0
 		},
 		"pos-y": {
 			"type": "float",
 			"name": "Posición Y (%)",
-			"default": 15.0,
+			"default": 22.0,
 			"min": 0.0,
 			"max": 100.0
+		},
+		"window": {
+			"type": "float",
+			"name": "Duración de la barra (s)",
+			"default": 2.0,
+			"min": 0.5,
+			"max": 5.0
+		},
+		"timeline": {
+			"type": "bool",
+			"name": "Mostrar barra de clicks",
+			"default": true
 		},
 		"show-cps": {
 			"type": "bool",
