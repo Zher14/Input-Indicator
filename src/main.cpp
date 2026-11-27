@@ -76,14 +76,15 @@ namespace iv {
 }
 
 // ---------------------------------------------------------------------
-// Overlay minimalista que se dibuja en el PlayLayer
+// Overlay minimalista: teclas + barras verticales de clicks/releases
 // ---------------------------------------------------------------------
 class InputOverlay : public CCNode {
 protected:
-	static constexpr float KEY = 16.f;     // tamano de la tecla
-	static constexpr float BAR_X = 22.f;   // inicio de la barra
-	static constexpr float BAR_W = 150.f;  // ancho de la barra
-	static constexpr float ROW_H = 22.f;   // alto de cada fila
+	static constexpr float W = 12.f;       // ancho de tecla / barra
+	static constexpr float GAP = 5.f;      // espacio entre columnas
+	static constexpr float PGAP = 12.f;    // espacio extra entre jugadores
+	static constexpr float BAR_H = 110.f;  // alto de la barra
+	static constexpr float BASE = W + 3.f; // donde empieza la barra
 
 	struct Row {
 		int player = 0;
@@ -95,28 +96,27 @@ protected:
 	std::vector<Row> m_rows;
 	CCLabelBMFont* m_info = nullptr;
 
-	static void box(CCDrawNode* n, float x1, float y1, float x2, float y2,
-		ccColor4F fill, float bw, ccColor4F border) {
+	static void box(CCDrawNode* n, float x1, float y1, float x2, float y2, ccColor4F c) {
 		CCPoint v[4] = {
 			CCPoint(x1, y1), CCPoint(x2, y1), CCPoint(x2, y2), CCPoint(x1, y2)
 		};
-		n->drawPolygon(v, 4, fill, bw, border);
+		n->drawPolygon(v, 4, c, 0.f, c);
 	}
 
-	void addRow(int player, int button, int idx) {
+	void addRow(int player, int button, float x) {
 		Row r;
 		r.player = player;
 		r.button = button;
 
 		r.holder = CCNode::create();
-		r.holder->setPosition({0.f, -ROW_H * idx});
+		r.holder->setPosition({x, 0.f});
 		this->addChild(r.holder);
-
-		r.key = CCDrawNode::create();
-		r.holder->addChild(r.key);
 
 		r.bar = CCDrawNode::create();
 		r.holder->addChild(r.bar);
+
+		r.key = CCDrawNode::create();
+		r.holder->addChild(r.key);
 
 		m_rows.push_back(r);
 	}
@@ -124,21 +124,22 @@ protected:
 	bool init(bool platformer) {
 		if (!CCNode::init()) return false;
 
-		int idx = 0;
+		float x = 0.f;
 		for (int p = 0; p < 2; p++) {
 			if (platformer) {
-				this->addRow(p, 2, idx++);
-				this->addRow(p, 1, idx++);
-				this->addRow(p, 3, idx++);
+				this->addRow(p, 2, x); x += W + GAP;
+				this->addRow(p, 1, x); x += W + GAP;
+				this->addRow(p, 3, x); x += W + GAP;
 			} else {
-				this->addRow(p, 1, idx++);
+				this->addRow(p, 1, x); x += W + GAP;
 			}
+			x += PGAP;
 		}
 
 		m_info = CCLabelBMFont::create("", "chatFont.fnt");
 		m_info->setAnchorPoint({0.f, 0.5f});
-		m_info->setScale(0.7f);
-		m_info->setPosition({0.f, 20.f});
+		m_info->setScale(0.55f);
+		m_info->setPosition({0.f, -9.f});
 		this->addChild(m_info);
 
 		this->scheduleUpdate();
@@ -190,50 +191,43 @@ public:
 			r.holder->setVisible(visible);
 			if (!visible) continue;
 
-			// Tecla
+			// Tecla: cuadro tenue, blanco al pulsar
 			bool pressed = st.down[r.player][r.button];
 			r.key->clear();
-			if (pressed) {
-				box(r.key, 0.f, -KEY / 2, KEY, KEY / 2,
-					ccc4f(1.f, 1.f, 1.f, 0.95f * op), 0.f, ccc4f(1.f, 1.f, 1.f, 0.95f * op));
-			} else {
-				box(r.key, 0.f, -KEY / 2, KEY, KEY / 2,
-					ccc4f(0.f, 0.f, 0.f, 0.45f * op), 1.f, ccc4f(1.f, 1.f, 1.f, 0.35f * op));
-			}
+			box(r.key, 0.f, 0.f, W, W,
+				pressed ? ccc4f(1.f, 1.f, 1.f, 0.95f * op) : ccc4f(1.f, 1.f, 1.f, 0.14f * op));
 
-			// Barra de clicks / releases
+			// Barra vertical: lo mas nuevo abajo, junto a la tecla
 			r.bar->setVisible(showTimeline);
 			if (!showTimeline) continue;
 			r.bar->clear();
-			box(r.bar, BAR_X, -KEY / 2, BAR_X + BAR_W, KEY / 2,
-				ccc4f(0.f, 0.f, 0.f, 0.35f * op), 1.f, ccc4f(1.f, 1.f, 1.f, 0.18f * op));
+			box(r.bar, 0.f, BASE, W, BASE + BAR_H, ccc4f(1.f, 1.f, 1.f, 0.07f * op));
 
 			for (auto& s : st.segs[r.player][r.button]) {
 				double e = s.end < 0 ? t : s.end;
-				float x1 = BAR_W * (1.f - static_cast<float>((t - s.start) / window));
-				float x2 = BAR_W * (1.f - static_cast<float>((t - e) / window));
-				x1 = std::max(0.f, x1);
-				x2 = std::min(BAR_W, x2);
-				if (x2 <= 0.f || x1 >= BAR_W) continue;
-				if (x2 - x1 < 1.f) x2 = std::min(BAR_W, x1 + 1.f);
+				float y1 = BAR_H * static_cast<float>((t - e) / window);
+				float y2 = BAR_H * static_cast<float>((t - s.start) / window);
+				y1 = std::max(0.f, y1);
+				y2 = std::min(BAR_H, y2);
+				if (y1 >= BAR_H || y2 <= 0.f) continue;
+				if (y2 - y1 < 1.f) y2 = std::min(BAR_H, y1 + 1.f);
 
 				float a = (s.end < 0 ? 0.95f : 0.8f) * op;
-				box(r.bar, BAR_X + x1, -KEY / 2 + 2.f, BAR_X + x2, KEY / 2 - 2.f,
-					ccc4f(1.f, 1.f, 1.f, a), 0.f, ccc4f(1.f, 1.f, 1.f, a));
+				box(r.bar, 0.f, BASE + y1, W, BASE + y2, ccc4f(1.f, 1.f, 1.f, a));
 			}
 		}
 
-		// Texto
+		// Texto pequeno debajo
 		bool showCps = iv::S<bool>("show-cps");
 		bool showTotal = iv::S<bool>("show-total");
 		std::string txt;
-		if (showCps) txt += fmt::format("{} CPS", st.cps());
+		if (showCps) txt += fmt::format("{} cps", st.cps());
 		if (showTotal) {
-			if (!txt.empty()) txt += "  -  ";
+			if (!txt.empty()) txt += "  ";
 			txt += fmt::format("{}", st.total);
 		}
 		m_info->setString(txt.c_str());
-		m_info->setOpacity(static_cast<GLubyte>(255.f * op * 0.85f));
+		m_info->setOpacity(static_cast<GLubyte>(255.f * op * 0.7f));
 		m_info->setVisible(!txt.empty());
 	}
 };
