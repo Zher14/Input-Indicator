@@ -345,10 +345,10 @@ class $modify(IVPauseLayer, PauseLayer) {
 			menu->updateLayout();
 		} else {
 			auto win = CCDirector::get()->getWinSize();
-			auto menu = CCMenu::create();
-			menu->setPosition({win.width - 40.f, 40.f});
-			menu->addChild(btn);
-			this->addChild(menu);
+			auto fallbackMenu = CCMenu::create();
+			fallbackMenu->setPosition({win.width - 40.f, 40.f});
+			fallbackMenu->addChild(btn);
+			this->addChild(fallbackMenu);
 		}
 	}
 
