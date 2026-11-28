@@ -6,11 +6,11 @@
 		"mac": "2.2091",
 		"ios": "2.2091"
 	},
-	"version": "v1.3.0",
+	"version": "v1.4.0",
 	"id": "zher14.input-indicator",
 	"name": "Input Indicator",
 	"developer": "Zher14",
-	"description": "Indicador minimalista de clicks con barra de clicks y releases vertical u horizontal, colores y velocidad ajustables.",
+	"description": "Indicador de clicks con barra de clicks y releases (vertical u horizontal), estilos de UI, colores, contorno, fuentes de GD e idiomas.",
 	"tags": ["utility", "interface"],
 	"settings": {
 		"enabled": {
@@ -28,6 +28,13 @@
 		"scale": {
 			"type": "float",
 			"name": "Tamaño",
+			"default": 1.0,
+			"min": 0.5,
+			"max": 2.0
+		},
+		"text-scale": {
+			"type": "float",
+			"name": "Tamaño del texto",
 			"default": 1.0,
 			"min": 0.5,
 			"max": 2.0
@@ -60,9 +67,28 @@
 			"min": 60.0,
 			"max": 240.0
 		},
+		"gap": {
+			"type": "float",
+			"name": "Separación entre teclas",
+			"default": 5.0,
+			"min": 2.0,
+			"max": 16.0
+		},
+		"outline-size": {
+			"type": "float",
+			"name": "Grosor del contorno",
+			"default": 0.0,
+			"min": 0.0,
+			"max": 4.0
+		},
 		"bar-color": {
 			"type": "rgb",
 			"name": "Color de la barra",
+			"default": [255, 255, 255]
+		},
+		"outline-color": {
+			"type": "rgb",
+			"name": "Color del contorno",
 			"default": [255, 255, 255]
 		},
 		"vertical": {
@@ -73,6 +99,11 @@
 		"flip": {
 			"type": "bool",
 			"name": "Invertir dirección",
+			"default": false
+		},
+		"fade": {
+			"type": "bool",
+			"name": "Desvanecer la barra",
 			"default": false
 		},
 		"timeline": {
